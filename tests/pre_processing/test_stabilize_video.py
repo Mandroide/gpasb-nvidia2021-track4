@@ -5,7 +5,7 @@ import pytest
 
 sys.path.append(os.fspath(pathlib.PurePath(__file__).parent.parent.parent))
 
-from pre_processing.video_stabilization import stabilize_video
+from pre_processing import stabilize_video
 
 
 @pytest.mark.parametrize("dest_dir, video_path, root")
