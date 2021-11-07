@@ -75,7 +75,25 @@ def stabilize_frames(dest_dir: pathlib.Path) -> bool:
     return success
 
 
-def parse_args() -> argparse.Namespace:
+def stabilize_video(stabilizer: vidstab.VidStab, dest_dir: pathlib.Path, video_path: pathlib.PurePath,
+                    root: pathlib.PurePath) -> pathlib.Path:
+    """
+
+    :param stabilizer: VidStab object with stabilize method.
+    :param dest_dir: Directory where the stabilized video will be stored.
+    :param video_path: Video to stabilize
+    :param root: Directory with the source video to stabilize.
+    :return: Video path of the stabilized video
+    """
+    logger = get_logger()
+    vid_path = dest_dir / video_path.relative_to(root)
+    vid_path.parent.mkdir(parents=True, exist_ok=True)
+    logger.debug(f"Printing the vid_path {os.fspath(vid_path.with_suffix('avi'))}")
+    stabilizer.stabilize(input_path=os.fspath(video_path), output_path=os.fspath(vid_path.with_suffix("mp4")))
+    return vid_path.with_suffix("mp4")
+
+
+def parse_cli() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Extract frames from directory containing videos.")
     parser.add_argument("--root", type=pathlib.Path, help="directory containing videos to be processed",
                         default=pathlib.Path(__file__).parent / "sample_video")
@@ -86,7 +104,7 @@ def parse_args() -> argparse.Namespace:
                         help="spreadsheet containing ground truth data of videos to be processed",
                         default=None)
 
-    return parser.parse_args()
+    return parser
 
 
 def drop_columns(dfs: Dict) -> None:
@@ -107,7 +125,7 @@ def drop_columns(dfs: Dict) -> None:
         dfs[year] = dfs[year].astype(int, errors="ignore")
 
 
-def main(args: argparse.Namespace) -> int:
+def get_logger() -> logging.Logger:
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     fmt = logging.Formatter(
@@ -116,6 +134,12 @@ def main(args: argparse.Namespace) -> int:
     hdlr.setLevel(logging.DEBUG)
     hdlr.setFormatter(fmt)
     logger.addHandler(hdlr)
+
+    return logger
+
+
+def main(args: argparse.Namespace) -> int:
+    logger = get_logger()
     start_time = time.perf_counter()
 
     root = args.root.resolve()
@@ -149,6 +173,12 @@ def main(args: argparse.Namespace) -> int:
               for video_path in video_names]
         for future in tqdm.tqdm(concurrent.futures.as_completed(fs)):
             p_exec.submit(stabilize_frames, future.result())
+        stabilizer = vidstab.VidStab()
+        dest_dir = repo_path / "stabilized_videos"
+        fs = [t_exec.submit(stabilize_video, stabilizer, dest_dir, video_path, root)
+              for video_path in video_names]
+        for future in tqdm.tqdm(concurrent.futures.as_completed(fs)):
+            print(os.fspath(future.result()))
 
     # Store relative paths to root directory.
     with open(repo_path / "dataset.json", "w") as f:
@@ -163,4 +193,4 @@ def main(args: argparse.Namespace) -> int:
 
 
 if __name__ == "__main__":
-    main(parse_args())
+    main(parse_cli().parse_args())
