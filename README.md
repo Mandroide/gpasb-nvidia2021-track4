@@ -1,5 +1,9 @@
 # NVIDIA AICITY CHALLENGE 2021 - Track 4
 
+**IMPORTANT** 
+
+This project is just a template. It does not contain any working code. The development of this project based on the mentioned paper was stopped due to changes of priorities in our team. We apologize for the inconvenience.
+
 ## Good Practices and A Strong Baseline for Traffic Anomaly Detection
 
 This repository contains a customized source code of Track 4 in the NVIDIA AI City Challenge at CVPR 2021.
